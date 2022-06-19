@@ -1,21 +1,31 @@
-use rocket::response::status::BadRequest;
 use rocket::serde::json::Json;
-use rocket::State;
 
+use rocket::{
+    http::Status,
+    response::{status, Redirect},
+    routes, Build, Rocket, State,
+};
 use sqlx::FromRow;
 
 use crate::expansion::Expansion;
 use crate::MyState;
 
 use crate::client::TwitterClient;
-use crate::defaults::{Error, Tweet, Tweets, TweetsError};
-use shuttle_service::SecretStore;
+use crate::defaults::TweetsError;
+use shuttle_service::{error::CustomError, SecretStore};
 
-async fn get_client(state: &State<MyState>) -> Result<TwitterClient, BadRequest<String>> {
-    let bearer_token = state.pool.get_secret("bearer_token").await;
+use tracing::info;
+
+async fn get_secret(state: &State<MyState>) -> Result<String, shuttle_service::Error> {
+    info!("Getting secret");
+    Ok(state.pool.get_secret("bearer_token").await?)
+}
+
+async fn get_client(state: &State<MyState>) -> Result<TwitterClient, shuttle_service::Error> {
+    let bearer_token = get_secret(&state).await?;
 
     Ok(TwitterClient::builder()
-        .set_bearer_token(bearer_token.unwrap())
+        .set_bearer_token(bearer_token)
         .build()
         .unwrap())
 }
@@ -24,8 +34,13 @@ async fn get_client(state: &State<MyState>) -> Result<TwitterClient, BadRequest<
 pub async fn get_recent_tweets(
     query: &str,
     state: &State<MyState>,
-) -> Result<Json<TweetsError>, BadRequest<String>> {
-    let twitter_client = get_client(state).await?;
+) -> Result<Json<TweetsError>, status::Custom<String>> {
+    let twitter_client = get_client(state).await.map_err(|_| {
+        status::Custom(
+            Status::InternalServerError,
+            "Not able to get Twitter Client, sorry 🤷".into(),
+        )
+    })?;
 
     let media_expansion = Expansion::User(&["description", "created_at", "location"]);
     let tweet_expansion = Expansion::Tweet(&[
@@ -34,13 +49,17 @@ pub async fn get_recent_tweets(
         "in_reply_to_user_id",
         "referenced_tweets",
     ]);
-    let resp = twitter_client
-        .search_recent_tweets("#nyc")
-        .expansion(&[media_expansion, tweet_expansion])
-        .send();
 
-    match resp {
-        Ok(tweets) => Ok(Json(tweets)),
-        Err(err) => Err(BadRequest(Some("Bearer token not found".to_string()))),
-    }
+    let resp = twitter_client
+        .search_recent_tweets(query)
+        .expansion(&[media_expansion, tweet_expansion])
+        .send()
+        .map_err(|_| {
+            status::Custom(
+                Status::InternalServerError,
+                "something went wrong, sorry 🤷".into(),
+            )
+        })?;
+
+    Ok(Json(resp))
 }

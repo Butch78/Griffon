@@ -24,7 +24,7 @@ pub struct MyState {
 
 #[get("/")]
 fn index() -> RawHtml<&'static str> {
-    RawHtml(r#"See <a href="/home">Home</a>"#)
+    RawHtml(r#"See <a href="/twitter/nyc">Example Request</a>"#)
 }
 
 #[shuttle_service::main]
