@@ -1,0 +1,19 @@
+[package]
+name = "griffon"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+reqwest = { version = "^0.11.9", features = ["blocking", "json"] }
+http = "0.2.8"
+rocket = { version = "0.5.0-rc.1", features = ["json"] }
+serde = "1.0"
+serde_json = "1.0"
+sqlx = { version = "0.5", features = ["runtime-tokio-native-tls", "postgres"] }
+shuttle-service = { version = "0.3.3", features = ["sqlx-postgres", "secrets", "web-rocket"] }
+
+[dependencies.rocket_dyn_templates]
+features = ["tera"]
