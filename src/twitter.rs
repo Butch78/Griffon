@@ -18,12 +18,14 @@ use tracing::info;
 
 async fn get_secret(state: &State<MyState>) -> Result<String, shuttle_service::Error> {
     info!("Getting secret");
+    // get secret defined in `Secrets.toml` file.
     Ok(state.pool.get_secret("bearer_token").await?)
 }
 
 async fn get_client(state: &State<MyState>) -> Result<TwitterClient, shuttle_service::Error> {
     let bearer_token = get_secret(&state).await?;
 
+    // Create a new client with the bearer token.
     Ok(TwitterClient::builder()
         .set_bearer_token(bearer_token)
         .build()
