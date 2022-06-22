@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
+name = "griffon"
 crate-type = ["cdylib"]
 
 [dependencies]
-reqwest = { version = "^0.11.9", features = ["blocking", "json"] }
+reqwest = { version = "0.11.11", features = ["blocking", "json"] }
 http = "0.2.8"
 rocket = { version = "0.5.0-rc.1", features = ["json"] }
 serde = "1.0"
@@ -20,3 +21,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dependencies.rocket_dyn_templates]
 features = ["tera"]
+
